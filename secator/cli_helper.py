@@ -50,7 +50,6 @@ CLI_EXEC_OPTS = {
 	'no_poll': {'is_flag': True, 'short': 'np', 'default': False, 'help': 'Do not live poll for tasks results when running in worker'},  # noqa: E501
 	'enable_pyinstrument': {'is_flag': True, 'short': 'pyinstrument', 'default': False, 'help': 'Enable pyinstrument profiling'},  # noqa: E501
 	'enable_memray': {'is_flag': True, 'short': 'memray', 'default': False, 'help': 'Enable memray profiling'},
-	'axiom': {'is_flag': True, 'default': False, 'help': 'Use axiom-scan for distributed scanning'},
 }
 
 CLI_TYPE_MAPPING = {
@@ -277,14 +276,6 @@ def register_runner(cli_endpoint, config):
 				console.print(f'[bold red]Driver "{driver}" is not supported.[/]')
 				console.print(f'Supported drivers: {supported_drivers_str}')
 				sys.exit(1)
-
-		# Load axiom hooks if --axiom flag is passed
-		axiom_enabled = opts.get('axiom', False)
-		if axiom_enabled:
-			from secator.utils import import_dynamic
-			axiom_hooks = import_dynamic('secator.hooks.axiom', 'HOOKS')
-			if axiom_hooks:
-				hooks.append(axiom_hooks)
 
 		if enable_pyinstrument or enable_memray:
 			if not ADDONS_ENABLED["trace"]:
