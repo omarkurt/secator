@@ -2028,3 +2028,116 @@ def coverage(unit_only, integration_only, template_only):
 	else:
 		Command.execute(f'{sys.executable} -m coverage combine --keep', name='coverage combine', cwd=ROOT_FOLDER)
 	run_test(cmd, 'coverage', use_os_system=True)
+
+
+#-------#
+# AXIOM #
+#-------#
+
+@cli.group(aliases=['ax'])
+def axiom():
+	"""Axiom distributed scanning."""
+	pass
+
+
+@axiom.command('list')
+@click.option('--category', '-c', type=str, default=None, help='Filter by category')
+@click.option('--json', '-json', 'json_', is_flag=True, default=False, help='JSON output')
+def axiom_list(category, json_):
+	"""List axiom-supported tools."""
+	from secator.hooks.axiom import list_axiom_tools, get_axiom_categories, AXIOM_TOOL_CONFIGS
+	
+	tools = list_axiom_tools(category=category)
+	
+	if json_:
+		import json
+		console.print(json.dumps(tools, indent=2))
+		return
+	
+	# Show categories
+	categories = get_axiom_categories()
+	console.print(f'\n[bold cyan]Categories:[/] {", ".join(categories)}\n')
+	
+	# Build table
+	table = Table(title=f"Axiom Supported Tools ({len(tools)} total)", show_header=True)
+	table.add_column("Tool", style="cyan", no_wrap=True)
+	table.add_column("Module", style="dim")
+	table.add_column("Category", style="magenta")
+	table.add_column("Input Types", style="green")
+	table.add_column("JSON", style="yellow", justify="center")
+	table.add_column("Description")
+	
+	for tool in tools:
+		table.add_row(
+			tool['name'],
+			tool['module'],
+			tool['category'],
+			', '.join(tool['input_types'][:3]) + ('...' if len(tool['input_types']) > 3 else ''),
+			'✓' if tool['supports_json'] else '✗',
+			tool['description']
+		)
+	
+	console.print(table)
+
+
+@axiom.command('status')
+def axiom_status():
+	"""Check axiom status and configuration."""
+	from secator.hooks.axiom import is_axiom_installed, AXIOM_SUPPORTED_TOOLS
+	
+	console.print('\n[bold cyan]:rocket: Axiom Status[/]\n')
+	
+	# Check installation
+	installed = is_axiom_installed()
+	status_icon = '✓' if installed else '✗'
+	status_color = 'green' if installed else 'red'
+	console.print(f'  [bold]axiom-scan installed:[/] [{status_color}]{status_icon}[/]')
+	
+	# Show config
+	console.print(f'  [bold]Config enabled:[/] {CONFIG.addons.axiom.enabled}')
+	console.print(f'  [bold]Fleet name:[/] {CONFIG.addons.axiom.fleet_name or "(not set)"}')
+	console.print(f'  [bold]Output dir:[/] {CONFIG.addons.axiom.output_dir}')
+	console.print(f'  [bold]Supported tools:[/] {len(AXIOM_SUPPORTED_TOOLS)}')
+	
+	if not installed:
+		console.print('\n[bold yellow]To install axiom:[/]')
+		console.print('  bash <(curl -s https://raw.githubusercontent.com/pry0cc/axiom/master/interact/axiom-configure)')
+	
+	console.print()
+
+
+@axiom.command('config')
+@click.option('--enable/--disable', default=None, help='Enable or disable axiom globally')
+@click.option('--fleet', type=str, default=None, help='Set fleet name')
+@click.option('--output-dir', type=str, default=None, help='Set output directory')
+def axiom_config(enable, fleet, output_dir):
+	"""Configure axiom settings."""
+	changed = False
+	
+	if enable is not None:
+		CONFIG.set('addons.axiom.enabled', enable)
+		console.print(f'[bold green]Set addons.axiom.enabled = {enable}[/]')
+		changed = True
+	
+	if fleet is not None:
+		CONFIG.set('addons.axiom.fleet_name', fleet)
+		console.print(f'[bold green]Set addons.axiom.fleet_name = {fleet}[/]')
+		changed = True
+	
+	if output_dir is not None:
+		CONFIG.set('addons.axiom.output_dir', output_dir)
+		console.print(f'[bold green]Set addons.axiom.output_dir = {output_dir}[/]')
+		changed = True
+	
+	if changed:
+		config = CONFIG.validate()
+		if config:
+			CONFIG.save()
+			console.print(f'[bold green]:tada: Saved config to [/]{CONFIG._path}')
+	else:
+		# Show current config
+		console.print('\n[bold cyan]Current Axiom Configuration:[/]\n')
+		console.print(f'  addons.axiom.enabled: {CONFIG.addons.axiom.enabled}')
+		console.print(f'  addons.axiom.fleet_name: {CONFIG.addons.axiom.fleet_name or "(not set)"}')
+		console.print(f'  addons.axiom.output_dir: {CONFIG.addons.axiom.output_dir}')
+		console.print('\n[dim]Use --enable/--disable, --fleet, --output-dir to change settings[/]\n')
