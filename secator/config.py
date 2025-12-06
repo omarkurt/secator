@@ -182,11 +182,18 @@ class MongodbAddon(StrictModel):
 	server_selection_timeout_ms: int = 5000
 
 
+class AxiomAddon(StrictModel):
+	enabled: bool = False
+	fleet_name: str = ''
+	output_dir: str = '/tmp/axiom'
+
+
 class Addons(StrictModel):
 	gdrive: GoogleDriveAddon = GoogleDriveAddon()
 	gcs: GoogleCloudStorageAddon = GoogleCloudStorageAddon()
 	worker: WorkerAddon = WorkerAddon()
 	mongodb: MongodbAddon = MongodbAddon()
+	axiom: AxiomAddon = AxiomAddon()
 
 
 class SecatorConfig(StrictModel):
