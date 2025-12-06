@@ -10,10 +10,11 @@ Usage:
 
 import os
 import shlex
+import shutil
 from pathlib import Path
 
 from secator.config import CONFIG
-from secator.output_types import Info, Warning
+from secator.output_types import Info, Warning, Error
 from secator.runners import Task
 from secator.utils import debug
 
@@ -37,6 +38,15 @@ AXIOM_SUPPORTED_TOOLS = [
     'ffuf',
     'feroxbuster',
 ]
+
+
+def is_axiom_installed():
+    """Check if axiom-scan is installed on the system.
+    
+    Returns:
+        bool: True if axiom-scan binary is found in PATH.
+    """
+    return shutil.which('axiom-scan') is not None
 
 
 def is_axiom_enabled(self):
@@ -156,8 +166,9 @@ def modify_cmd_for_axiom(self):
     This hook is called during command initialization (on_cmd hook).
     It modifies the command to use axiom-scan if:
     1. The --axiom flag is passed or addons.axiom.enabled is True
-    2. The tool is in the AXIOM_SUPPORTED_TOOLS list
-    3. There are multiple inputs (using file input)
+    2. axiom-scan is installed on the system
+    3. The tool is in the AXIOM_SUPPORTED_TOOLS list
+    4. There are multiple inputs (using file input)
     
     Args:
         self: Command instance.
@@ -171,6 +182,13 @@ def modify_cmd_for_axiom(self):
         print("[AXIOM DEBUG] axiom not enabled, skipping")
         debug('axiom not enabled, skipping', sub='hooks.axiom')
         return
+    
+    # Check if axiom-scan is installed
+    if not is_axiom_installed():
+        print("[AXIOM DEBUG] axiom-scan not installed, aborting")
+        self._print('[bold red]Error: axiom-scan is not installed. Please install Axiom first: https://github.com/pry0cc/axiom[/]', rich=True)
+        debug('axiom-scan not installed, aborting', sub='hooks.axiom')
+        raise SystemExit(1)
     
     # Check if tool is supported
     tool_name = self.cmd_name
